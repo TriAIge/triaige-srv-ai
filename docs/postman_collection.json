@@ -1,0 +1,158 @@
+{
+  "info": {
+    "name": "TriAIge AI Service (local)",
+    "description": "Coleção para testes locais do triaige-srv-ai: health checks, endpoint interno /internal/api/v1/analysis e endpoints do Actuator.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "f8f6a2c0-7e3a-4f1b-9e1e-triaige-srv-ai"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8082",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "metrics"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/metrics/gemini.call.duration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/gemini.call.duration",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "metrics", "gemini.call.duration"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/prometheus",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/prometheus",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "prometheus"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Internal",
+      "item": [
+        {
+          "name": "POST /internal/api/v1/analysis - Análise completa (CIVIL + jurisprudência)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correlationId\": \"corr-test-001\",\n  \"sessionId\": \"sess-2026-000001\",\n  \"caseId\": \"CASO-2026-000001\",\n  \"tenantId\": \"tenant-001\",\n  \"legalArea\": \"CIVIL\",\n  \"s3Bucket\": \"triaige-processed-documents\",\n  \"documents\": [\n    {\n      \"documentId\": \"doc-001\",\n      \"documentType\": \"PETICAO_INICIAL\",\n      \"s3Key\": \"tenant-001/sess-2026-000001/doc-001/normalized.txt\"\n    }\n  ],\n  \"requestedTools\": [\n    \"CASE_SUMMARY\",\n    \"JURISPRUDENCE_SEARCH\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/api/v1/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["internal", "api", "v1", "analysis"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /internal/api/v1/analysis - Trabalhista (somente CASE_SUMMARY)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correlationId\": \"corr-sqs-001\",\n  \"sessionId\": \"sess-sqs-001\",\n  \"caseId\": \"CASO-SQS-001\",\n  \"tenantId\": \"tenant-001\",\n  \"legalArea\": \"TRABALHISTA\",\n  \"s3Bucket\": \"triaige-processed-documents\",\n  \"documents\": [\n    {\n      \"documentId\": \"doc-001\",\n      \"documentType\": \"PETICAO_INICIAL\",\n      \"s3Key\": \"tenant-001/sess-2026-000001/doc-001/normalized.txt\"\n    }\n  ],\n  \"requestedTools\": [\n    \"CASE_SUMMARY\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/api/v1/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["internal", "api", "v1", "analysis"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /internal/api/v1/analysis - Área fora do escopo (OUT_OF_SCOPE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correlationId\": \"corr-test-002\",\n  \"sessionId\": \"sess-2026-000002\",\n  \"caseId\": \"CASO-2026-000002\",\n  \"tenantId\": \"tenant-001\",\n  \"legalArea\": \"PENAL\",\n  \"s3Bucket\": \"triaige-processed-documents\",\n  \"documents\": [\n    {\n      \"documentId\": \"doc-001\",\n      \"documentType\": \"PETICAO_INICIAL\",\n      \"s3Key\": \"tenant-001/sess-2026-000002/doc-001/normalized.txt\"\n    }\n  ],\n  \"requestedTools\": [\n    \"CASE_SUMMARY\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/api/v1/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["internal", "api", "v1", "analysis"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,501 @@
+openapi: 3.0.3
+info:
+  title: TriAIge AI Service
+  description: >
+    Serviço de análise jurídica automatizada do projeto TriAIge.
+    Recebe, via chamada REST síncrona do triaige-srv-orchestrator, ponteiros
+    para documentos normalizados no S3, chama o Gemini para produzir uma
+    análise estruturada (com apoio opcional de busca de jurisprudência) e
+    retorna o resultado na própria resposta HTTP.
+
+    Este documento cobre os endpoints HTTP expostos pelo serviço: o endpoint
+    interno de análise, health check e Actuator.
+  version: "1.0.0"
+  contact:
+    name: TriAIge
+
+servers:
+  - url: http://localhost:8082
+    description: Ambiente local (perfil "local")
+
+tags:
+  - name: Health
+    description: Endpoints de verificação de saúde do serviço
+  - name: Internal
+    description: Endpoints internos chamados pelo triaige-srv-orchestrator
+  - name: Actuator
+    description: Endpoints do Spring Boot Actuator
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check simples
+      description: Retorna o status básico do serviço. Disponível em todos os perfis.
+      operationId: health
+      responses:
+        "200":
+          description: Serviço operacional
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: UP
+                service: triaige-srv-ai
+
+  /actuator/health:
+    get:
+      tags: [Actuator]
+      summary: Health check do Spring Boot Actuator
+      description: Health check detalhado, incluindo status de componentes (ex.: discos, etc).
+      operationId: actuatorHealth
+      responses:
+        "200":
+          description: Status de saúde do serviço e seus componentes
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                status: UP
+                components:
+                  diskSpace:
+                    status: UP
+                  ping:
+                    status: UP
+
+  /actuator/info:
+    get:
+      tags: [Actuator]
+      summary: Informações gerais da aplicação
+      operationId: actuatorInfo
+      responses:
+        "200":
+          description: Informações da aplicação
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /actuator/metrics:
+    get:
+      tags: [Actuator]
+      summary: Lista de métricas disponíveis (Micrometer)
+      operationId: actuatorMetrics
+      responses:
+        "200":
+          description: Lista de nomes de métricas disponíveis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  names:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  names:
+                    - gemini.call.duration
+                    - jvm.memory.used
+                    - http.server.requests
+
+  /actuator/metrics/{metricName}:
+    get:
+      tags: [Actuator]
+      summary: Detalhes de uma métrica específica
+      operationId: actuatorMetricDetail
+      parameters:
+        - name: metricName
+          in: path
+          required: true
+          schema:
+            type: string
+          example: gemini.call.duration
+      responses:
+        "200":
+          description: Detalhes da métrica solicitada
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /actuator/prometheus:
+    get:
+      tags: [Actuator]
+      summary: Métricas no formato Prometheus
+      operationId: actuatorPrometheus
+      responses:
+        "200":
+          description: Métricas em formato de texto Prometheus
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /internal/api/v1/analysis:
+    post:
+      tags: [Internal]
+      summary: Executa de forma síncrona a análise de IA de uma sessão de triagem
+      description: >
+        Chamado pelo triaige-srv-orchestrator após o pré-processamento dos
+        documentos. Recebe ponteiros para os documentos normalizados no S3,
+        executa a análise via Gemini (com apoio opcional de busca de
+        jurisprudência) e retorna o resultado diretamente na resposta HTTP.
+      operationId: analyze
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisRequest"
+            examples:
+              completedFlow:
+                summary: Análise completa com jurisprudência
+                value:
+                  eventType: AI_ANALYSIS_REQUESTED
+                  correlationId: corr-test-001
+                  sessionId: sess-2026-000001
+                  caseId: CASO-2026-000001
+                  tenantId: tenant-001
+                  legalArea: CIVIL
+                  s3Bucket: triaige-processed-documents
+                  documents:
+                    - documentId: doc-001
+                      documentType: PETICAO_INICIAL
+                      s3Key: tenant-001/sess-2026-000001/doc-001/normalized.txt
+                  requestedTools:
+                    - CASE_SUMMARY
+                    - JURISPRUDENCE_SEARCH
+              outOfScopeLegalArea:
+                summary: Área jurídica fora do escopo (resposta OUT_OF_SCOPE)
+                value:
+                  eventType: AI_ANALYSIS_REQUESTED
+                  correlationId: corr-test-002
+                  sessionId: sess-2026-000002
+                  caseId: CASO-2026-000002
+                  tenantId: tenant-001
+                  legalArea: PENAL
+                  s3Bucket: triaige-processed-documents
+                  documents:
+                    - documentId: doc-001
+                      documentType: PETICAO_INICIAL
+                      s3Key: tenant-001/sess-2026-000002/doc-001/normalized.txt
+                  requestedTools:
+                    - CASE_SUMMARY
+      responses:
+        "200":
+          description: Análise processada (status pode ser COMPLETED, OUT_OF_SCOPE ou FAILED)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiAnalysisResponse"
+              examples:
+                completed:
+                  summary: Análise concluída com sucesso
+                  value:
+                    correlationId: corr-test-001
+                    sessionId: sess-2026-000001
+                    caseId: CASO-2026-000001
+                    tenantId: tenant-001
+                    status: COMPLETED
+                    analysis:
+                      legalArea: CIVIL
+                      caseSummary: "Resumo do caso gerado pela IA..."
+                      parties:
+                        - name: João da Silva
+                          role: AUTOR
+                        - name: Empresa XYZ Ltda
+                          role: REU
+                      claims:
+                        - Indenização por danos morais
+                      evidences:
+                        - documentId: doc-001
+                          description: Petição inicial
+                          relevance: ALTA
+                      risks:
+                        - description: Prazo prescricional próximo do limite
+                          severity: MEDIA
+                      missingInformation:
+                        - Comprovante de residência atualizado
+                      priority:
+                        level: ALTA
+                        justification: Risco de prescrição
+                      jurisprudence:
+                        - title: "REsp 123456/SP"
+                          court: STJ
+                          processNumber: "123456-78.2020.8.26.0000"
+                          judgmentDate: "2021-05-10"
+                          summary: "Ementa do julgado..."
+                          sourceUrl: "https://stj.jus.br/..."
+                      warnings: []
+                    metadata:
+                      model: gemini-1.5-flash
+                      processedAt: "2026-06-14T12:00:00Z"
+                      documentsAnalyzed: 1
+                      toolsUsed:
+                        - CASE_SUMMARY
+                        - JURISPRUDENCE_SEARCH
+                      geminiCallDurationMs: 1850
+                outOfScope:
+                  summary: Área jurídica fora do escopo
+                  value:
+                    correlationId: corr-test-002
+                    sessionId: sess-2026-000002
+                    caseId: CASO-2026-000002
+                    tenantId: tenant-001
+                    status: OUT_OF_SCOPE
+                    error:
+                      code: OUT_OF_SCOPE_LEGAL_AREA
+                      message: "Legal area is out of scope for automated analysis: PENAL"
+                      retryable: false
+                    metadata:
+                      processedAt: "2026-06-14T12:00:00Z"
+        "400":
+          description: Requisição inválida (payload malformado ou campos obrigatórios ausentes)
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+        service:
+          type: string
+          example: triaige-ai-service
+
+    DocumentRef:
+      type: object
+      description: Referência a um documento normalizado armazenado no S3.
+      properties:
+        documentId:
+          type: string
+          example: doc-001
+        documentType:
+          type: string
+          description: Tipo do documento jurídico.
+          example: PETICAO_INICIAL
+        s3Key:
+          type: string
+          description: Chave do objeto no bucket S3 informado em `s3Bucket`.
+          example: tenant-001/sess-2026-000001/doc-001/normalized.txt
+
+    AnalysisRequest:
+      type: object
+      description: >
+        Payload da requisição REST enviada pelo triaige-srv-orchestrator ao
+        endpoint `/internal/api/v1/analysis`.
+      required:
+        - sessionId
+        - caseId
+        - tenantId
+        - legalArea
+        - s3Bucket
+        - documents
+      properties:
+        eventType:
+          type: string
+          example: AI_ANALYSIS_REQUESTED
+        correlationId:
+          type: string
+          example: corr-test-001
+        sessionId:
+          type: string
+          example: sess-2026-000001
+        caseId:
+          type: string
+          example: CASO-2026-000001
+        tenantId:
+          type: string
+          example: tenant-001
+        legalArea:
+          type: string
+          description: >
+            Área jurídica do caso. Áreas permitidas são configuráveis
+            (`triaige.allowed-legal-areas`); por padrão `CIVIL` e
+            `TRABALHISTA`. Outras áreas resultam em status `OUT_OF_SCOPE`.
+          example: CIVIL
+        s3Bucket:
+          type: string
+          example: triaige-processed-documents
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentRef"
+        requestedTools:
+          type: array
+          description: >
+            Ferramentas adicionais a serem executadas. `CASE_SUMMARY` é
+            sempre executado. `JURISPRUDENCE_SEARCH` habilita a busca de
+            jurisprudência relacionada.
+          items:
+            type: string
+            enum: [CASE_SUMMARY, JURISPRUDENCE_SEARCH]
+          example: [CASE_SUMMARY, JURISPRUDENCE_SEARCH]
+
+    AnalysisStatus:
+      type: string
+      enum: [PENDING, IN_PROGRESS, COMPLETED, FAILED, OUT_OF_SCOPE]
+
+    ErrorCode:
+      type: string
+      enum:
+        - INVALID_MESSAGE
+        - DOCUMENT_NOT_FOUND
+        - EMPTY_DOCUMENT
+        - S3_ACCESS_DENIED
+        - GEMINI_TIMEOUT
+        - GEMINI_HTTP_ERROR
+        - GEMINI_INVALID_RESPONSE
+        - JURISPRUDENCE_PROVIDER_ERROR
+        - OUT_OF_SCOPE_LEGAL_AREA
+
+    JurisprudenceResult:
+      type: object
+      properties:
+        title:
+          type: string
+        court:
+          type: string
+        processNumber:
+          type: string
+        judgmentDate:
+          type: string
+        summary:
+          type: string
+        sourceUrl:
+          type: string
+
+    Party:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+
+    Evidence:
+      type: object
+      properties:
+        documentId:
+          type: string
+        description:
+          type: string
+        relevance:
+          type: string
+
+    Risk:
+      type: object
+      properties:
+        description:
+          type: string
+        severity:
+          type: string
+
+    Priority:
+      type: object
+      properties:
+        level:
+          type: string
+        justification:
+          type: string
+
+    Analysis:
+      type: object
+      description: Presente quando `status` for `COMPLETED` ou `OUT_OF_SCOPE`.
+      properties:
+        legalArea:
+          type: string
+        caseSummary:
+          type: string
+        parties:
+          type: array
+          items:
+            $ref: "#/components/schemas/Party"
+        claims:
+          type: array
+          items:
+            type: string
+        evidences:
+          type: array
+          items:
+            $ref: "#/components/schemas/Evidence"
+        risks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Risk"
+        missingInformation:
+          type: array
+          items:
+            type: string
+        priority:
+          $ref: "#/components/schemas/Priority"
+        jurisprudence:
+          type: array
+          items:
+            $ref: "#/components/schemas/JurisprudenceResult"
+        warnings:
+          type: array
+          items:
+            type: string
+
+    AnalysisError:
+      type: object
+      description: Presente quando `status` for `FAILED` (ou `OUT_OF_SCOPE`).
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          type: string
+        retryable:
+          type: boolean
+
+    Metadata:
+      type: object
+      properties:
+        model:
+          type: string
+          example: gemini-1.5-flash
+        processedAt:
+          type: string
+          format: date-time
+        documentsAnalyzed:
+          type: integer
+        toolsUsed:
+          type: array
+          items:
+            type: string
+        geminiCallDurationMs:
+          type: integer
+          format: int64
+
+    AiAnalysisResponse:
+      type: object
+      properties:
+        correlationId:
+          type: string
+        sessionId:
+          type: string
+        caseId:
+          type: string
+        tenantId:
+          type: string
+        status:
+          $ref: "#/components/schemas/AnalysisStatus"
+        analysis:
+          $ref: "#/components/schemas/Analysis"
+        error:
+          $ref: "#/components/schemas/AnalysisError"
+        metadata:
+          $ref: "#/components/schemas/Metadata"
