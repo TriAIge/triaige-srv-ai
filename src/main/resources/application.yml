@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: triaige-srv-ai
+
+  # Valores sensíveis e específicos de cada ambiente (chave Gemini etc.)
+  # ficam fora deste repositório, em um arquivo por ambiente no projeto triaige-srv-ai-config.
+  # Se o diretório/arquivo não existir, os defaults definidos aqui e
+  # em application-{profile}.yml continuam valendo.
+  config:
+    import: "optional:file:${CONFIG_REPO_PATH:../triaige-srv-ai-config/}"
+
+server:
+  port: ${SERVER_PORT:8082}
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+  s3:
+    endpoint: ${S3_ENDPOINT:}
+    force-path-style: ${S3_FORCE_PATH_STYLE:false}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  temperature: ${GEMINI_TEMPERATURE:0.2}
+  max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:8192}
+  timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:60}
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+  max-retries: ${GEMINI_MAX_RETRIES:3}
+  retry-backoff-ms: ${GEMINI_RETRY_BACKOFF_MS:2000}
+
+jurisprudence:
+  base-url: ${JURISPRUDENCE_API_BASE_URL:https://6a2ecdd9c9776ca6c0c4f537.mockapi.io}
+  path: ${JURISPRUDENCE_API_PATH:/jurisprudence-mock/jurisprudences}
+  timeout-seconds: ${JURISPRUDENCE_API_TIMEOUT_SECONDS:10}
+
+triaige:
+  max-document-chars: ${TRIAIGE_MAX_DOCUMENT_CHARS:120000}
+  allowed-legal-areas:
+    - CIVIL
+    - TRABALHISTA
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    br.com.triaige: ${LOG_LEVEL:INFO}
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [cid=%X{correlationId}] [sid=%X{sessionId}] %logger{36} - %msg%n"
