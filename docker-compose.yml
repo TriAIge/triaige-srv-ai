@@ -18,7 +18,7 @@ services:
       S3_ENDPOINT: http://host.docker.internal:4566
       S3_FORCE_PATH_STYLE: "true"
       GEMINI_API_KEY: ${GEMINI_API_KEY:-your-gemini-api-key-here}
-      GEMINI_MODEL: gemini-1.5-flash
+      GEMINI_MODEL: gemini-2.5-flash
       LOG_LEVEL: DEBUG
     extra_hosts:
       - "host.docker.internal:host-gateway"
