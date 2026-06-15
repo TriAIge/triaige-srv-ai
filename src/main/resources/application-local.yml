@@ -1,0 +1,19 @@
+aws:
+  region: us-east-1
+  s3:
+    endpoint: ${S3_ENDPOINT:http://localhost:4566}
+    force-path-style: true
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: gemini-2.5-flash
+  temperature: 0.2
+  max-output-tokens: 8192
+  timeout-seconds: 60
+
+triaige:
+  max-document-chars: 120000
+
+logging:
+  level:
+    br.com.triaige: DEBUG

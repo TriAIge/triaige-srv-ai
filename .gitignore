@@ -1,5 +1,9 @@
 # Compiled class file
 *.class
+target/
+
+# Local environment / secrets
+.env
 
 # Log file
 *.log
