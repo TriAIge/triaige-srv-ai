@@ -12,7 +12,7 @@ services:
     profiles:
       - app   # executar com: docker compose --profile app up
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: ho
       SERVER_PORT: 8082
       AWS_REGION: us-east-1
       S3_ENDPOINT: http://host.docker.internal:4566

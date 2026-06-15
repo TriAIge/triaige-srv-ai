@@ -1,3 +1,4 @@
+# Perfil HO — desenvolvimento local (LocalStack)
 aws:
   region: us-east-1
   s3:

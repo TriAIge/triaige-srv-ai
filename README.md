@@ -81,8 +81,8 @@ O LocalStack local fica centralizado no `triaige-srv-orchestrator` e cria:
 ### 3. Rode o serviço
 
 ```bash
-# Opção A — Maven com profile local
-SPRING_PROFILES_ACTIVE=local \
+# Opção A — Maven com profile ho
+SPRING_PROFILES_ACTIVE=ho \
 S3_ENDPOINT=http://localhost:4566 \
 GEMINI_API_KEY=$GEMINI_API_KEY \
 mvn spring-boot:run
@@ -112,7 +112,7 @@ Health check: `GET http://localhost:8082/health`
 | `TRIAIGE_MAX_DOCUMENT_CHARS` | `120000` | Limite de chars por documento |
 | `LOG_LEVEL` | `INFO` | Nível de log |
 | `SERVER_PORT` | `8082` | Porta HTTP |
-| `CONFIG_REPO_PATH` | `../triaige-srv-ai-config/` | Caminho do repositório de [configuração externa](#configuração-externa-segredos) com os segredos do ambiente (usado em `prod`) |
+| `CONFIG_REPO_PATH` | `../triaige-srv-ai-config/` | Caminho do repositório de [configuração externa](#configuração-externa-segredos) com os segredos do ambiente (opcional) |
 
 ---
 
@@ -128,15 +128,13 @@ spring:
     import: "optional:file:${CONFIG_REPO_PATH:../triaige-srv-ai-config/}"
 ```
 
-- O `triaige-srv-ai-config` contém **um arquivo por ambiente**
-  (`application-local.yml`, `application-ho.yml`, `application-prod.yml`),
-  seguindo a mesma convenção de profiles do Spring Boot.
+- O `triaige-srv-ai-config` contém **um arquivo por ambiente** (ex:
+  `application-ho.yml`), seguindo a mesma convenção de profiles do Spring
+  Boot.
 - O import é **opcional** — sem o diretório/arquivo do profile ativo, os
   defaults de `application.yml`/`application-{profile}.yml` continuam
-  valendo normalmente (ex: em `local`, via variáveis de ambiente do
+  valendo normalmente (ex: em `ho`, via variáveis de ambiente do
   `docker-compose.yml`).
-- Em `prod`, sem `application-prod.yml` (ou a variável `GEMINI_API_KEY`
-  equivalente), a aplicação não tem como autenticar no Gemini.
 
 Veja detalhes no [README do `triaige-srv-ai-config`].
 
